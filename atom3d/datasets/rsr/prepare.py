@@ -9,7 +9,6 @@ import atom3d.util.log as log
 
 logger = log.get_logger('rsr_prepare')
 
-
 # Canonical splits.
 TRAIN = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13']
 VAL = ['14b', '14f', '15', '17']

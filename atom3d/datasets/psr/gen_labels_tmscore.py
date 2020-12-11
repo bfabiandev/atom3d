@@ -62,8 +62,8 @@ def run_tmscore_per_target(tmscore_exe, output_filename, target_name,
         rows,
         columns=['target', 'decoy', 'rmsd', 'gdt_ts', 'gdt_ha', 'tm'])
     df = df.sort_values(
-            ['rmsd', 'gdt_ts', 'gdt_ha', 'tm', 'decoy'],
-            ascending=[True, False, False, False, False]).reset_index(drop=True)
+        ['rmsd', 'gdt_ts', 'gdt_ha', 'tm', 'decoy'],
+        ascending=[True, False, False, False, False]).reset_index(drop=True)
     # Write to file
     df.to_csv(output_filename, sep='\t', index=False)
 

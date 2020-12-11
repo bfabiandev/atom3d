@@ -45,7 +45,7 @@ def _gen_labels_shard(sharded, shard_num, info_csv):
     info = pd.read_csv(info_csv)
     info['ensemble'] = info.apply(
         lambda x: x['ligand'] + '__' + x['active_struc'].split('_')[2] + '__' +
-        x['inactive_struc'].split('_')[2], axis=1)
+                  x['inactive_struc'].split('_')[2], axis=1)
     info = info.set_index('ensemble', drop=False)
     # Remove duplicate ensembles.
     info = info[~info.index.duplicated()]

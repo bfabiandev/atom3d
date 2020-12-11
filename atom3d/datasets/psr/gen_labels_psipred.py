@@ -120,7 +120,7 @@ def run_psipred(blast_path, nr_path, psipred_path, pssms_dir, psfms_dir,
 
     elapsed = time.time() - tic
     logging.info("{:}: Finished in {:.2f} sec ({:.2f} min)".format(
-        target, elapsed, elapsed/60.0))
+        target, elapsed, elapsed / 60.0))
 
 
 @click.command()
@@ -166,7 +166,7 @@ def main(data_dir, target_list, fastas_dir, pssms_dir, psfms_dir,
     for i, target in enumerate(targets):
         fasta_file = os.path.join(fastas_dir, '{:}.fasta'.format(target))
         if os.path.exists(fasta_file):
-            inputs.append((i+1, blast_path, nr_path, psipred_path, pssms_dir,
+            inputs.append((i + 1, blast_path, nr_path, psipred_path, pssms_dir,
                            psfms_dir, secstructs_dir, tmp_dir, target, fasta_file))
         else:
             logger.warning("FASTA for {:} does not exist".format(target))

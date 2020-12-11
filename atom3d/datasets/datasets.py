@@ -1,23 +1,23 @@
 import contextlib
 import gzip
 import importlib
-import json
 import io
+import json
 import logging
-import msgpack
-from pathlib import Path
 import pickle as pkl
-import tqdm
+from pathlib import Path
 
 import Bio.PDB
 import lmdb
+import msgpack
 import numpy as np
 import pandas as pd
+import tqdm
 from torch.utils.data import Dataset, IterableDataset
 
-import atom3d.util.rosetta as ar
 import atom3d.util.file as fi
 import atom3d.util.formats as fo
+import atom3d.util.rosetta as ar
 
 logger = logging.getLogger(__name__)
 

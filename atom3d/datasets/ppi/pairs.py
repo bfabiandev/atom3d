@@ -16,11 +16,11 @@ logger = log.get_logger('shard_pairs')
 @click.argument('output_path', type=click.Path())
 @click.option('-c', '--cutoff', type=int, default=8,
               help='Maximum distance (in angstroms), for two residues to be '
-              'considered neighbors.')
+                   'considered neighbors.')
 @click.option('--cutoff-type', default='CA',
               type=click.Choice(['heavy', 'CA'], case_sensitive=False),
               help='How to compute distance between residues: CA is based on '
-              'alpha-carbons, heavy is based on any heavy atom.')
+                   'alpha-carbons, heavy is based on any heavy atom.')
 @click.option('-n', '--num_threads', default=8,
               help='Number of threads to use for parallel processing.')
 def shard_pairs(input_path, output_path, cutoff, cutoff_type,

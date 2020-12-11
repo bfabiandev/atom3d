@@ -1,6 +1,7 @@
-import click
 import logging
 import sys
+
+import click
 
 import atom3d.datasets.datasets as da
 import atom3d.util.file as fi
@@ -22,7 +23,7 @@ def main(input_dir, output_lmdb, filetype, score_path, serialization_format):
     """Script wrapper to make_lmdb_dataset to create LMDB dataset."""
     logging.basicConfig(stream=sys.stdout,
                         format='%(asctime)s %(levelname)s %(process)d: ' +
-                        '%(message)s',
+                               '%(message)s',
                         level=logging.INFO)
 
     logger.info(f'filetype: {filetype}')

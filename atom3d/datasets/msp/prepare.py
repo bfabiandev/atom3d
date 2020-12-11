@@ -1,12 +1,12 @@
 """Code for preparing a pairs dataset (splitting)."""
 import click
 
+import atom3d.filters.filters as filters
 import atom3d.protein.sequence
 import atom3d.protein.sequence as seq
-import atom3d.splits.sequence
-import atom3d.filters.filters as filters
 import atom3d.shard.shard as sh
 import atom3d.shard.shard_ops as sho
+import atom3d.splits.sequence
 import atom3d.util.log as log
 
 logger = log.get_logger('prepare')
@@ -61,7 +61,7 @@ def split(input_sharded, output_root, shuffle_buffer):
               help='Sharded dataset to filter against (for SCOP and seq)')
 @click.option('--shuffle_buffer', type=int, default=10,
               help='How many shards to use in streaming shuffle. 0 means will '
-              'not shuffle.')
+                   'not shuffle.')
 def filter_pairs(input_sharded_path, output_root, bsa, against_path,
                  shuffle_buffer):
     input_sharded = sh.Sharded.load(input_sharded_path)

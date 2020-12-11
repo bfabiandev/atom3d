@@ -16,7 +16,6 @@ logger = log.get_logger('rsr_label')
               help='Number of threads to use for parallel processing.')
 @click.option('--overwrite/--no-overwrite', default=False,
               help='Overwrite existing labels.')
-
 def gen_labels_sharded(sharded_path, csv_file, num_threads, overwrite):
     sharded = sh.Sharded.load(sharded_path)
     num_shards = sharded.get_num_shards()
@@ -43,25 +42,24 @@ def gen_labels_sharded(sharded_path, csv_file, num_threads, overwrite):
 
 
 def _gen_labels_shard(sharded, shard_num, labels_data):
-    
     logger.info(f'Processing shard {shard_num:}')
-    
+
     shard = sharded.read_shard(shard_num)
-    
+
     # Names of the labels (first column is mol_id and excluded)
     data_keys = labels_data.keys()[1:]
-    
+
     # Create a list of all labels and make it a data frame
     all_labels = []
     for s, subunit in shard.groupby('subunit'):
-        svalues = labels_data[labels_data['mol_id']==s][data_keys].values.tolist()[0]
+        svalues = labels_data[labels_data['mol_id'] == s][data_keys].values.tolist()[0]
         all_labels.append([s, s] + svalues)
     col_titles = ['ensemble', 'subunit'] + data_keys.tolist()
     all_labels = pd.DataFrame(all_labels, columns=col_titles)
-    
+
     # Add labels to the shard
     sharded.add_to_shard(shard_num, all_labels, 'labels')
-    
+
     logger.info(f'Done processing shard {shard_num:}')
 
 

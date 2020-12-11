@@ -45,6 +45,7 @@ def form_scop_filter(level, allowed=None, excluded=None):
         else:
             to_keep = pd.Series([True] * len(df), index=df['structure'])
         return df[to_keep.values]
+
     return filter_fn
 
 
@@ -74,6 +75,7 @@ def form_scop_filter_against(sharded, level, conservative):
                     if (pc, c) in scop_index:
                         result.append(scop_index.loc[(pc, c)].values)
         return np.unique(np.concatenate(result))
+
     scop_against = form_scop_against()
 
     def filter_fn(df):
@@ -93,4 +95,5 @@ def form_scop_filter_against(sharded, level, conservative):
         to_keep = \
             pd.Series(to_keep)[pd.Index(df[['structure', 'model', 'chain']])]
         return df[to_keep.values]
+
     return filter_fn

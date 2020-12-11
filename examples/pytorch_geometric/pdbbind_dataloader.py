@@ -2,27 +2,28 @@ import os
 
 import pandas as pd
 import torch
-from atom3d.protein_ligand.get_labels import get_label
 from torch_geometric.data import Dataset, Data, DataLoader
 
-from atom3d.util import formats as dt
-from atom3d.util import file as fi
-from atom3d.torch import graph
+from atom3d.datasets.lba.get_labels import get_label
 from atom3d.splits import splits as sp
+from atom3d.torch import graph
+from atom3d.util import file as fi
+from atom3d.util import formats as dt
 
 
 # loader for pytorch-geometric
 
 class GraphPDBBind(Dataset):
     """
-    PDBBind dataset in pytorch-geometric format. 
+    PDBBind dataset in pytorch-geometric format.
     Ref: https://pytorch-geometric.readthedocs.io/en/latest/_modules/torch_geometric/data/dataset.html#Dataset
     """
+
     def __init__(self, root, transform=None, pre_transform=None):
         super(GraphPDBBind, self).__init__(root, transform, pre_transform)
 
         self.pdb_idx_dict = self.get_idx_mapping()
-        self.idx_pdb_dict = {v:k for k,v in self.pdb_idx_dict.items()}
+        self.idx_pdb_dict = {v: k for k, v in self.pdb_idx_dict.items()}
 
     @property
     def raw_file_names(self):
@@ -30,7 +31,7 @@ class GraphPDBBind(Dataset):
 
     @property
     def processed_file_names(self):
-        num_samples = len(self.raw_file_names) // 3 # each example has protein/pocket/ligand files
+        num_samples = len(self.raw_file_names) // 3  # each example has protein/pocket/ligand files
         return [f'data_{i}.pt' for i in range(num_samples)]
 
     def get_idx_mapping(self):
@@ -42,7 +43,6 @@ class GraphPDBBind(Dataset):
                 pdb_idx_dict[pdb_code] = i
                 i += 1
         return pdb_idx_dict
-
 
     def pdb_to_idx(self, pdb):
         return self.pdb_idx_dict.get(pdb)
@@ -58,7 +58,8 @@ class GraphPDBBind(Dataset):
                 mol_graph = graph.mol_to_graph(dt.read_sdf_to_mol(raw_path, add_hs=True)[0])
             elif '_pocket' in raw_path:
                 prot_graph = graph.prot_df_to_graph(dt.bp_to_df(dt.read_any(raw_path, name=pdb_code)))
-                node_feats, edge_index, edge_feats, pos = graph.combine_graphs(prot_graph, mol_graph, edges_between=True)
+                node_feats, edge_index, edge_feats, pos = graph.combine_graphs(prot_graph, mol_graph,
+                                                                               edges_between=True)
                 data = Data(node_feats, edge_index, edge_feats, y=y, pos=pos)
                 data.pdb = pdb_code
                 torch.save(data, os.path.join(self.processed_dir, 'data_{}.pt'.format(i)))
@@ -76,7 +77,7 @@ class GraphPDBBind(Dataset):
 
 def pdbbind_dataloader(batch_size, data_dir='../../data/pdbbind', split_file=None):
     """
-    Creates dataloader for PDBBind dataset with specified split. 
+    Creates dataloader for PDBBind dataset with specified split.
     Assumes pre-computed split in 'split_file', which is used to index Dataset object
     TODO: implement on-the-fly splitting using split functions
     """
@@ -92,8 +93,6 @@ def pdbbind_dataloader(batch_size, data_dir='../../data/pdbbind', split_file=Non
         pdb_codes = [x for x in indices if dataset.pdb_to_idx(x)]
     return DataLoader(dataset.index_select(indices), batch_size, shuffle=True)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     dataset = GraphPDBBind(root='../../data/pdbbind')
-
-
-

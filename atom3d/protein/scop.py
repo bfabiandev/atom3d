@@ -1,7 +1,6 @@
 """Functions related to SCOP classes of structures."""
 import pandas as pd
 
-
 SCOP_CLA_LATEST_FILE = '../../metadata/scop-cla-latest.txt'
 PDB_CHAIN_SCOP2_UNIPROT_FILE = '../../metadata/pdb_chain_scop2_uniprot.csv'
 PDB_CHAIN_SCOP2B_SF_UNIPROT_FILE = '../../metadata/pdb_chain_scop2b_sf_uniprot.csv'
@@ -21,7 +20,7 @@ def get_scop_index():
         scop['scop'].apply(lambda x: int(x.split(',')[0].split('=')[1]))
     scop['class'] = \
         scop['scop'].apply(lambda x: int(x.split(',')[1].split('=')[1]))
-    scop['fold'] =  \
+    scop['fold'] = \
         scop['scop'].apply(lambda x: int(x.split(',')[2].split('=')[1]))
     scop['superfamily'] = \
         scop['scop'].apply(lambda x: int(x.split(',')[3].split('=')[1]))

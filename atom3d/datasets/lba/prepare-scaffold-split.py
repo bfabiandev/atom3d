@@ -1,15 +1,12 @@
 """Code for preparing a pairs dataset (filtering and splitting)."""
+import click
 import numpy as np
 import pandas as pd
-import click
 
-import atom3d.filters.pdb
-import atom3d.filters.sequence
-import atom3d.splits.splits as splits
 import atom3d.filters.filters as filters
 import atom3d.shard.shard as sh
 import atom3d.shard.shard_ops as sho
-import atom3d.util.file as fi
+import atom3d.splits.splits as splits
 import atom3d.util.log as log
 
 logger = log.get_logger('prepare')
@@ -49,9 +46,9 @@ def split(input_sharded, output_root, scaffold_data, shuffle_buffer):
         input_sharded, test_sharded, test_filter_fn, shuffle_buffer)
 
     # write splits to text files
-    np.savetxt(output_root.split('@')[0]+'_train.txt', train, fmt='%s')
-    np.savetxt(output_root.split('@')[0]+'_val.txt', val, fmt='%s')
-    np.savetxt(output_root.split('@')[0]+'_test.txt', test, fmt='%s')
+    np.savetxt(output_root.split('@')[0] + '_train.txt', train, fmt='%s')
+    np.savetxt(output_root.split('@')[0] + '_val.txt', val, fmt='%s')
+    np.savetxt(output_root.split('@')[0] + '_test.txt', test, fmt='%s')
 
 
 @click.command(help='Prepare a sequence identity split.')
@@ -60,7 +57,7 @@ def split(input_sharded, output_root, scaffold_data, shuffle_buffer):
 @click.argument('scaffold_file', type=click.Path(exists=True))
 @click.option('--shuffle_buffer', type=int, default=10,
               help='How many shards to use in streaming shuffle. 0 means will '
-              'not shuffle.')
+                   'not shuffle.')
 def prepare_scaffold_split(input_sharded_path, output_root, shuffle_buffer, scaffold_file):
     input_sharded = sh.Sharded.load(input_sharded_path)
     scaffold_data = pd.read_csv(scaffold_file)
@@ -69,4 +66,3 @@ def prepare_scaffold_split(input_sharded_path, output_root, shuffle_buffer, scaf
 
 if __name__ == "__main__":
     prepare_scaffold_split()
-

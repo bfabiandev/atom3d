@@ -1,25 +1,21 @@
 """Code for preparing a pairs dataset (filtering and splitting)."""
-import numpy as np
-import pandas as pd
 import click
+import numpy as np
 
-import atom3d.datasets.ppi.neighbors as nb
+import atom3d.filters.filters as filters
 import atom3d.filters.pdb
 import atom3d.filters.sequence
-import atom3d.protein.scop as scop
 import atom3d.protein.sequence
 import atom3d.protein.sequence as seq
-import atom3d.splits.sequence
-import atom3d.filters.filters as filters
 import atom3d.shard.shard as sh
 import atom3d.shard.shard_ops as sho
-import atom3d.util.file as fi
+import atom3d.splits.sequence
 import atom3d.util.log as log
 
 logger = log.get_logger('prepare')
 
 
-def split(input_sharded, output_root, shuffle_buffer, cutoff = 30):
+def split(input_sharded, output_root, shuffle_buffer, cutoff=30):
     """Split by sequence identity."""
     if input_sharded.get_keys() != ['ensemble']:
         raise RuntimeError('Can only apply to sharded by ensemble.')
@@ -59,10 +55,9 @@ def split(input_sharded, output_root, shuffle_buffer, cutoff = 30):
         input_sharded, test_sharded, test_filter_fn, shuffle_buffer)
 
     # write splits to text files
-    np.savetxt(output_root.split('@')[0]+'_train.txt', train, fmt='%s')
-    np.savetxt(output_root.split('@')[0]+'_val.txt', val, fmt='%s')
-    np.savetxt(output_root.split('@')[0]+'_test.txt', test, fmt='%s')
-
+    np.savetxt(output_root.split('@')[0] + '_train.txt', train, fmt='%s')
+    np.savetxt(output_root.split('@')[0] + '_val.txt', val, fmt='%s')
+    np.savetxt(output_root.split('@')[0] + '_test.txt', test, fmt='%s')
 
 
 @click.command(help='Prepare a sequence identity split.')
@@ -70,7 +65,7 @@ def split(input_sharded, output_root, shuffle_buffer, cutoff = 30):
 @click.argument('output_root', type=click.Path())
 @click.option('--shuffle_buffer', type=int, default=10,
               help='How many shards to use in streaming shuffle. 0 means will '
-              'not shuffle.')
+                   'not shuffle.')
 @click.option('--cutoff', type=float, default=30,
               help='Cutoff (in %) for sequence identity.')
 def prepare_seqid_split(input_sharded_path, output_root, shuffle_buffer, cutoff):
@@ -80,4 +75,3 @@ def prepare_seqid_split(input_sharded_path, output_root, shuffle_buffer, cutoff)
 
 if __name__ == "__main__":
     prepare_seqid_split()
-

@@ -50,13 +50,13 @@ def identity_filter(df):
 
 
 def compose(f, g):
-
     def filter_fn(df):
         df = g(df)
         if len(df) > 0:
             return f(df)
         else:
             return df
+
     return filter_fn
 
 

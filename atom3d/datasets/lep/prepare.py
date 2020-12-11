@@ -5,8 +5,8 @@ import pandas as pd
 import atom3d.filters.filters as filters
 import atom3d.shard.shard as sh
 import atom3d.shard.shard_ops as sho
-import atom3d.util.log as log
 import atom3d.splits.splits as splits
+import atom3d.util.log as log
 
 logger = log.get_logger('lep_prepare')
 
@@ -19,7 +19,7 @@ def split(input_sharded, output_root, info_csv, shuffle_buffer):
     info = pd.read_csv(info_csv)
     info['ensemble'] = info.apply(
         lambda x: x['ligand'] + '__' + x['active_struc'].split('_')[2] + '__' +
-        x['inactive_struc'].split('_')[2], axis=1)
+                  x['inactive_struc'].split('_')[2], axis=1)
     info = info.set_index('ensemble')
     # Remove duplicate ensembles.
     info = info[~info.index.duplicated()]
@@ -71,7 +71,7 @@ def split(input_sharded, output_root, info_csv, shuffle_buffer):
 @click.argument('info_csv', type=click.Path(exists=True))
 @click.option('--shuffle_buffer', type=int, default=5,
               help='How many shards to use in streaming shuffle. 0 means will '
-              'not shuffle.')
+                   'not shuffle.')
 def prepare(input_sharded_path, output_root, info_csv, shuffle_buffer):
     input_sharded = sh.Sharded.load(input_sharded_path)
     split(input_sharded, output_root, info_csv, shuffle_buffer)

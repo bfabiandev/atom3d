@@ -21,6 +21,7 @@ def form_size_filter(max_size=None, min_size=None):
             tmp = tmp[df['structure']]
             to_keep = (to_keep & tmp)
         return df[to_keep.values]
+
     return filter_fn
 
 
@@ -51,6 +52,7 @@ def form_source_filter(allowed=None, excluded=None):
         else:
             to_keep = pd.Series([True] * len(df), index=df['structure'])
         return df[to_keep.values]
+
     return filter_fn
 
 
@@ -81,6 +83,7 @@ def form_molecule_type_filter(allowed=None, excluded=None):
         else:
             to_keep = pd.Series([True] * len(df), index=df['structure'])
         return df[to_keep.values]
+
     return filter_fn
 
 
@@ -98,4 +101,5 @@ def form_resolution_filter(threshold):
         pdb_codes = df['structure'].apply(lambda x: x[:4].lower())
         to_keep = resolution[pdb_codes] < threshold
         return df[to_keep.values]
+
     return filter_fn

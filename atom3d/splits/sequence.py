@@ -9,6 +9,7 @@ import atom3d.util.log as log
 
 logger = log.get_logger('sequence_splits')
 
+
 ####################################
 # split by pre-clustered sequence
 # identity clusters from PDB

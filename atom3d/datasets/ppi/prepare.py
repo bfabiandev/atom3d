@@ -3,15 +3,15 @@ import numpy as np
 import pandas as pd
 
 import atom3d.datasets.ppi.neighbors as nb
+import atom3d.filters.filters as filters
 import atom3d.filters.pdb
 import atom3d.filters.sequence
 import atom3d.protein.scop as scop
 import atom3d.protein.sequence
 import atom3d.protein.sequence as seq
-import atom3d.splits.sequence
-import atom3d.filters.filters as filters
 import atom3d.shard.shard as sh
 import atom3d.shard.shard_ops as sho
+import atom3d.splits.sequence
 import atom3d.util.file as fi
 import atom3d.util.log as log
 
@@ -119,6 +119,7 @@ def form_scop_pair_filter_against(sharded, level):
                     to_keep[e] = False
         to_keep = pd.Series(to_keep)[df['ensemble']]
         return df[to_keep.values]
+
     return filter_fn
 
 
@@ -145,7 +146,7 @@ def form_bsa_filter(bsa_path, min_area):
               help='Sharded dataset to filter against (for SCOP and seq)')
 @click.option('--shuffle_buffer', type=int, default=10,
               help='How many shards to use in streaming shuffle. 0 means will '
-              'not shuffle.')
+                   'not shuffle.')
 def filter_pairs(input_sharded_path, output_root, bsa, against_path,
                  shuffle_buffer):
     input_sharded = sh.Sharded.load(input_sharded_path)

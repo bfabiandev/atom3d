@@ -6,9 +6,9 @@ import pandas as pd
 import atom3d.datasets.psr.util as util
 import atom3d.shard.ensemble as en
 import atom3d.shard.shard as sh
+import atom3d.splits.splits as sp
 import atom3d.util.file as fi
 import atom3d.util.formats as dt
-import atom3d.splits.splits as sp
 
 
 def split_targets_random(targets_df, train_size=None, val_size=0.1,
@@ -91,7 +91,7 @@ def generate_train_val_targets_tests(structures_df, targets_train, targets_val,
     exclude_natives is set, exclude all native structures from the generated set.
     """
     np.random.seed(random_seed)
-    sets = [] # [train, val, test]
+    sets = []  # [train, val, test]
     if exclude_natives:
         print('Exclude native structures')
         structures_df = structures_df[structures_df.target != structures_df.decoy]
@@ -103,7 +103,7 @@ def generate_train_val_targets_tests(structures_df, targets_train, targets_val,
         else:
             gps = df.groupby(['target'])
             idx = np.hstack([np.random.choice(v, decoy_size, replace=False) \
-                            for v in gps.groups.values()])
+                             for v in gps.groups.values()])
             set_df = df.iloc[idx].reset_index(drop=True)
         sets.append(set_df)
     return sets
@@ -120,7 +120,7 @@ def create_parser():
     parser.add_argument(
         'target_list',
         help='Path to the file that contains the targets and the years the '
-        'targets were released)')
+             'targets were released)')
     parser.add_argument('input_dir')
     parser.add_argument('output_sharded_train')
     parser.add_argument('output_sharded_val')
@@ -129,9 +129,9 @@ def create_parser():
                         default='year', const='year', nargs='?')
 
     parser.add_argument(
-        '--test_years', '-testy', type=int,  nargs='*', default=[2014],
+        '--test_years', '-testy', type=int, nargs='*', default=[2014],
         help='Use all targets released in these years for test set. '
-        'Default [2014] (CASP 11)')
+             'Default [2014] (CASP 11)')
     parser.add_argument(
         '--train_years', '-trainy', type=int, nargs='*', default=None,
         help='If not None, use all targets released in these years for train set')
@@ -142,8 +142,8 @@ def create_parser():
     parser.add_argument(
         '--train_size', '-train', type=float, default=None,
         help='Fraction of targets to include in train set. If None, '
-        'use all remaining. If splitby year, test_size is ignored '
-        '(i.e. train_size and val_size should add up 1.0)')
+             'use all remaining. If splitby year, test_size is ignored '
+             '(i.e. train_size and val_size should add up 1.0)')
     parser.add_argument(
         '--val_size', '-val', type=float, default=0.1,
         help='Fraction of targets to include in val set')
@@ -154,15 +154,15 @@ def create_parser():
     parser.add_argument(
         '--train_decoy_size', '-traind', type=int, default=None,
         help='Number of decoys per target to be included in the train '
-        'set. If None, include all decoys')
+             'set. If None, include all decoys')
     parser.add_argument(
         '--val_decoy_size', '-vald', type=int, default=None,
         help='Number of decoys per target to be included in the val '
-        'set. If None, include all decoys')
+             'set. If None, include all decoys')
     parser.add_argument(
         '--test_decoy_size', '-testd', type=int, default=None,
         help='Number of decoys per target to be included in the test set. '
-        'If None, include all decoys')
+             'If None, include all decoys')
     parser.add_argument(
         '--exclude_natives', '-no_nat', action='store_true', default=False,
         help='If set, exclude native structures from the train/val/test set')
@@ -186,7 +186,7 @@ def gen_splits(target_list, input_dir, output_sharded_train, output_sharded_val,
     files = fi.find_files(input_dir, dt.patterns['pdb'])
     structures_df = pd.DataFrame(
         [[util.get_target_name(f), util.get_decoy_name(f), f] for f in files],
-        columns = ['target', 'decoy', 'path'])
+        columns=['target', 'decoy', 'path'])
     # Remove duplicates
     structures_df = structures_df.drop_duplicates(
         subset=['target', 'decoy'], keep='first').reset_index(drop=True)

@@ -36,7 +36,7 @@ def find_similar(chain_sequences, blast_db, cutoff, num_alignments):
 
         for res in out.split():
             nident, match = res.split(',')
-            seq_id = float(nident)*100.0 / len(s)
+            seq_id = float(nident) * 100.0 / len(s)
             if seq_id >= cutoff:
                 sim.add(match)
     return list(sim)

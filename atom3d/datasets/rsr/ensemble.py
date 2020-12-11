@@ -22,7 +22,7 @@ def get_target_name(f):
     else:
         # We keep bound and free denotation if puzzle 14.
         target_name = str(target_number) + \
-            ('b' if 'bound' in dir_name else 'f')
+                      ('b' if 'bound' in dir_name else 'f')
     return target_name
 
 

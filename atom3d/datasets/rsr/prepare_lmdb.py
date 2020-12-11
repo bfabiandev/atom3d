@@ -13,7 +13,6 @@ import atom3d.util.file as fi
 import atom3d.util.formats as fo
 import atom3d.util.rosetta as ar
 
-
 logger = logging.getLogger(__name__)
 
 # Canonical splits.
@@ -34,7 +33,7 @@ def get_target(f):
     else:
         # We keep bound and free denotation if puzzle 14.
         target = str(target_number) + \
-            ('b' if 'bound' in dir_name else 'f')
+                 ('b' if 'bound' in dir_name else 'f')
     return target
 
 
@@ -46,7 +45,7 @@ def get_target(f):
 def prepare(input_file_path, output_root, score_path, structures_per_rna):
     logging.basicConfig(stream=sys.stdout,
                         format='%(asctime)s %(levelname)s %(process)d: ' +
-                        '%(message)s',
+                               '%(message)s',
                         level=logging.INFO)
 
     # Assume PDB filetype.

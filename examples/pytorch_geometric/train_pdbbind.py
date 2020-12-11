@@ -19,22 +19,22 @@ from torch_geometric.nn import GCNConv, GINConv, global_add_pool
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
+
 class GCN(torch.nn.Module):
     def __init__(self, num_features, hidden_dim):
         super(GCN, self).__init__()
         self.conv1 = GCNConv(num_features, hidden_dim)
         self.bn1 = torch.nn.BatchNorm1d(hidden_dim)
-        self.conv2 = GCNConv(hidden_dim, hidden_dim*2)
-        self.bn2 = torch.nn.BatchNorm1d(hidden_dim*2)
-        self.conv3 = GCNConv(hidden_dim*2, hidden_dim*4)
-        self.bn3 = torch.nn.BatchNorm1d(hidden_dim*4)
-        self.conv4 = GCNConv(hidden_dim*4, hidden_dim*4)
-        self.bn4 = torch.nn.BatchNorm1d(hidden_dim*4)
-        self.conv5 = GCNConv(hidden_dim*4, hidden_dim*8)
-        self.bn5 = torch.nn.BatchNorm1d(hidden_dim*8)
-        self.fc1 = Linear(hidden_dim*8, hidden_dim*4)
-        self.fc2 = Linear(hidden_dim*4, 1)
-
+        self.conv2 = GCNConv(hidden_dim, hidden_dim * 2)
+        self.bn2 = torch.nn.BatchNorm1d(hidden_dim * 2)
+        self.conv3 = GCNConv(hidden_dim * 2, hidden_dim * 4)
+        self.bn3 = torch.nn.BatchNorm1d(hidden_dim * 4)
+        self.conv4 = GCNConv(hidden_dim * 4, hidden_dim * 4)
+        self.bn4 = torch.nn.BatchNorm1d(hidden_dim * 4)
+        self.conv5 = GCNConv(hidden_dim * 4, hidden_dim * 8)
+        self.bn5 = torch.nn.BatchNorm1d(hidden_dim * 8)
+        self.fc1 = Linear(hidden_dim * 8, hidden_dim * 4)
+        self.fc2 = Linear(hidden_dim * 4, 1)
 
     def forward(self, x, edge_index, edge_weight, batch):
         x = self.conv1(x, edge_index, edge_weight)
@@ -56,6 +56,7 @@ class GCN(torch.nn.Module):
         x = F.relu(self.fc1(x))
         x = F.dropout(x, p=0.25, training=self.training)
         return self.fc2(x).view(-1)
+
 
 class GIN(torch.nn.Module):
     def __init__(self, num_features, hidden_dim):
@@ -99,7 +100,6 @@ class GIN(torch.nn.Module):
         x = F.relu(self.fc1(x))
         x = F.dropout(x, p=0.5, training=self.training)
         return self.fc2(x).view(-1)
-
 
 
 def train(epoch, arch, model, loader, optimizer, device):
@@ -148,15 +148,15 @@ def test(arch, model, loader, device):
         y_true.extend(data.y.tolist())
         y_pred.extend(output.tolist())
 
-
     # vx = np.array(y_pred) - np.mean(y_pred)
     # vy = np.array(y_true) - np.mean(y_true)
     # r2 = np.sum(vx * vy) / (np.sqrt(np.sum(vx ** 2)) * np.sqrt(np.sum(vy ** 2)))
-    r_p = np.corrcoef(y_true, y_pred)[0,1]
+    r_p = np.corrcoef(y_true, y_pred)[0, 1]
     r_s = spearmanr(y_true, y_pred)[0]
 
     # r2 = r2_score(y_true, y_pred)
     return np.sqrt(loss_all / total), r_p, r_s, y_true, y_pred
+
 
 def plot_corr(y_true, y_pred, plot_dir):
     plt.clf()
@@ -164,6 +164,7 @@ def plot_corr(y_true, y_pred, plot_dir):
     plt.xlabel('Actual -log(K)')
     plt.ylabel('Predicted -log(K)')
     plt.savefig(plot_dir)
+
 
 def save_weights(model, weight_dir):
     torch.save(model.state_dict(), weight_dir)
@@ -180,7 +181,7 @@ def train_pdbbind(split, architecture, base_dir, device, log_dir, seed=None, tes
     split_dir = os.path.join(os.getcwd(), base_dir, 'splits')
     train_split = os.path.join(split_dir, f'train_{split}.txt')
     val_split = os.path.join(split_dir, f'val_{split}.txt')
-    test_split = os.path.join(split_dir,f'test_{split}.txt')
+    test_split = os.path.join(split_dir, f'test_{split}.txt')
     train_loader = pdbbind_dataloader(batch_size, split_file=train_split)
     val_loader = pdbbind_dataloader(batch_size, split_file=val_split)
     test_loader = pdbbind_dataloader(batch_size, split_file=test_split)
@@ -203,17 +204,16 @@ def train_pdbbind(split, architecture, base_dir, device, log_dir, seed=None, tes
     if architecture == 'GCN':
         model = GCN(num_features, hidden_dim=hidden_dim).to(device)
     elif architecture == 'GIN':
-        model = GIN(num_features, hidden_dim=hidden_dim).to(device) 
+        model = GIN(num_features, hidden_dim=hidden_dim).to(device)
     model.to(device)
 
     best_val_loss = 999
     best_rp = 0
     best_rs = 0
 
-
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    for epoch in range(1, num_epochs+1):
+    for epoch in range(1, num_epochs + 1):
         start = time.time()
         train_loss = train(epoch, architecture, model, train_loader, optimizer, device)
         val_loss, r_p, r_s, y_true, y_pred = test(architecture, model, val_loader, device)
@@ -225,7 +225,9 @@ def train_pdbbind(split, architecture, base_dir, device, log_dir, seed=None, tes
             best_rs = r_s
         elapsed = (time.time() - start)
         print('Epoch: {:03d}, Time: {:.3f} s'.format(epoch, elapsed))
-        print('\tTrain RMSE: {:.7f}, Val RMSE: {:.7f}, Pearson R: {:.7f}, Spearman R: {:.7f}'.format(train_loss, val_loss, r_p, r_s))
+        print(
+            '\tTrain RMSE: {:.7f}, Val RMSE: {:.7f}, Pearson R: {:.7f}, Spearman R: {:.7f}'.format(train_loss, val_loss,
+                                                                                                   r_p, r_s))
         logger.info('{:03d}\t{:.7f}\t{:.7f}\t{:.7f}\t{:.7f}\n'.format(epoch, train_loss, val_loss, r_p, r_s))
 
     if test:
@@ -237,51 +239,41 @@ def train_pdbbind(split, architecture, base_dir, device, log_dir, seed=None, tes
         with open(test_file, 'a+') as out:
             out.write('{}\t{:.7f}\t{:.7f}\t{:.7f}\n'.format(seed, rmse, pearson, spearman))
 
-
-
     return best_val_loss, best_rp, best_rs
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=str, default='train')
     parser.add_argument('--split', type=str, default='random')
     parser.add_argument('--architecture', type=str, default='GCN')
     parser.add_argument('--log_dir', type=str, default=None)
+    parser.add_argument('--base_dir', type=str, default='../../data/pdbbind')
     args = parser.parse_args()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    base_dir = '../../data/pdbbind'
     log_dir = args.log_dir
-
 
     if args.mode == 'train':
         if log_dir is None:
             now = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-            log_dir = os.path.join(base_dir, 'logs', now)
+            log_dir = os.path.join(args.base_dir, 'logs', now)
         else:
-            log_dir = os.path.join(base_dir, 'logs', log_dir)
+            log_dir = os.path.join(args.base_dir, 'logs', log_dir)
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
-        train_pdbbind(args.split, args.architecture, base_dir, device, log_dir)
+        train_pdbbind(args.split, args.architecture, args.base_dir, device, log_dir)
     elif args.mode == 'test':
         for seed in np.random.randint(0, 1000, size=3):
             print('seed:', seed)
-            log_dir = os.path.join(base_dir, 'logs', f'test_{args.split}_{seed}')
+            log_dir = os.path.join(args.base_dir, 'logs', f'test_{args.split}_{seed}')
             if not os.path.exists(log_dir):
                 os.makedirs(log_dir)
             np.random.seed(seed)
             torch.manual_seed(seed)
-            train_pdbbind(args.split, args.architecture, base_dir, device, log_dir, seed, test_mode=True)
+            train_pdbbind(args.split, args.architecture, args.base_dir, device, log_dir, seed, test_mode=True)
     # elif args.mode == 'cv':
-    #     log_dir = os.path.join(base_dir, 'logs', f'superfam_cv')
+    #     log_dir = os.path.join(args.base_dir, 'logs', f'superfam_cv')
     #     if not os.path.exists(log_dir):
     #         os.makedirs(log_dir)
-    #     train_cv_pdbbind(args.architecture, base_dir, device, log_dir)
-
-
-
-
-
-
-
+    #     train_cv_pdbbind(args.architecture, args.base_dir, device, log_dir)

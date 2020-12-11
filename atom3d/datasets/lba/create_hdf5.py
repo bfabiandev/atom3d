@@ -8,9 +8,9 @@ import os
 import pandas as pd
 from rdkit.Chem import PandasTools
 from tqdm import tqdm
-import atom3d.util.formats as dt
-import atom3d.util.file as fi
 
+import atom3d.util.file as fi
+import atom3d.util.formats as dt
 
 
 def convert_to_hdf5(input_dir, label_file, hdf_file):
@@ -27,16 +27,16 @@ def convert_to_hdf5(input_dir, label_file, hdf_file):
         elif '_pocket' in f:
             df = dt.bp_to_df(dt.read_any(f))
             pockets.append(df)
-    
+
     print('converting proteins...')
     protein_df = pd.concat(proteins)
     pocket_df = pd.concat(pockets)
     pdb_codes = pd.DataFrame({'pdb': pdb_codes})
-    
+
     protein_df.to_hdf(hdf_file, 'proteins')
     pocket_df.to_hdf(hdf_file, 'pockets')
     pdb_codes.to_hdf(hdf_file, 'pdb_codes')
-    
+
     print('converting ligands...')
     sdf_files = fi.find_files(input_dir, 'sdf')
     big_sdf = os.path.join(input_dir, 'all_ligands.sdf')
@@ -44,7 +44,7 @@ def convert_to_hdf5(input_dir, label_file, hdf_file):
     lig_df = PandasTools.LoadSDF(big_sdf, molColName='Mol')
     lig_df.index = pdb_codes
     lig_df.to_hdf(hdf_file, 'ligands')
-    
+
     print('converting labels...')
     label_df = pd.read_csv(label_file)
     label_df = label_df.set_index('pdb').reindex(pdb_codes)
@@ -58,4 +58,3 @@ if __name__ == "__main__":
     parser.add_argument('out_file', type=str, default=6.0, help='output hdf5 file')
     args = parser.parse_args()
     convert_to_hdf5(args.datapath, args.label_file, args.out_file)
-

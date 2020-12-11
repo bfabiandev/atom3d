@@ -2,31 +2,29 @@
 # coding: utf-8
 
 
+import argparse
 import os
 
+import Bio.PDB
 import scipy.spatial
+from Bio.PDB.PDBIO import Select
+from rdkit import Chem
+from tqdm import tqdm
 
+import atom3d.datasets.lba.get_labels as lab
 import atom3d.util.file as fi
 import atom3d.util.formats as ft
-import get_labels as lab
-
-from rdkit import Chem
-import Bio.PDB
-from Bio.PDB.PDBIO import Select
-from tqdm import tqdm
-import argparse
-
 
 
 def get_ligand(ligfile):
     """
     Read ligand from PDB dataset into RDKit Mol. Assumes input is sdf format.
     """
-    lig=Chem.SDMolSupplier(ligfile)[0]
+    lig = Chem.SDMolSupplier(ligfile)[0]
     # Many SDF in PDBBind do not parse correctly. If SDF fails, try loading the mol2 file instead
     if lig is None:
         print('trying mol2...')
-        lig=Chem.MolFromMol2File(ligfile[:-4] + '.mol2')
+        lig = Chem.MolFromMol2File(ligfile[:-4] + '.mol2')
     if lig is None:
         print('failed')
         return None
@@ -74,8 +72,10 @@ class PocketSelect(Select):
     """
     Selection class for subsetting protein to key binding residues
     """
+
     def __init__(self, reslist):
         self.reslist = reslist
+
     def accept_residue(self, residue):
         if residue in self.reslist:
             return True
@@ -110,7 +110,6 @@ def process_files(input_dir):
     return structure_dict
 
 
-
 def write_files(pdbid, protein, ligand, pocket, out_path):
     """
     Writes cleaned structure files for protein, ligand, and pocket.
@@ -143,8 +142,9 @@ def produce_cleaned_dataset(structure_dict, out_path, dist):
         pocket_res = get_pocket_res(protein, ligand, dist)
         write_files(pdb, protein, ligand, pocket_res, out_path)
 
+
 def generate_labels(data_dir, out_dir):
-	lab.main(data_dir, out_dir)
+    lab.main(data_dir, out_dir)
 
 
 def main():

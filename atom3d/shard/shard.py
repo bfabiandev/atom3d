@@ -26,7 +26,7 @@ db_sem = mp.Semaphore()
 def shard_dataset(input_dir, sharded_path, filetype, ensembler):
     """Shard whole input dataset."""
     logging.basicConfig(format='%(asctime)s %(levelname)s %(process)d: ' +
-                        '%(message)s',
+                               '%(message)s',
                         level=logging.INFO)
 
     dirname = os.path.dirname(sharded_path)

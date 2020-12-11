@@ -12,7 +12,7 @@ import atom3d.util.formats as dt
 def filter_sharded(input_sharded, output_sharded, filter_fn, shuffle_buffer=0):
     """Filter sharded dataset to new sharded dataset, using provided filter."""
     logging.basicConfig(format='%(asctime)s %(levelname)s %(process)d: ' +
-                        '%(message)s',
+                               '%(message)s',
                         level=logging.INFO)
 
     if not os.path.exists(os.path.dirname(output_sharded.path)):

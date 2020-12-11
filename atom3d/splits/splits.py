@@ -140,7 +140,7 @@ def scaffold_split(scaffold_list, vali_split=0.1, test_split=0.1):
             indices_vali (int[]):  indices of the validation set.
             indices_test (int[]): indices of the test set.
     """
-    
+
     logger.info(f'Splitting dataset with {len(scaffold_list):} entries.')
 
     # Calculate the target sizes of the splits
@@ -149,26 +149,26 @@ def scaffold_split(scaffold_list, vali_split=0.1, test_split=0.1):
     testset_size = test_split * dataset_size
     valiset_size = vali_split * dataset_size
     trainingset_size = dataset_size - valiset_size - testset_size
-    
-    # Order the scaffolds from common to uncommon 
+
+    # Order the scaffolds from common to uncommon
     scaffolds, counts = np.unique(scaffold_list, return_counts=True)
     order = np.argsort(counts)[::-1]
     scaffolds_ordered = scaffolds[order]
-    
+
     # Initialize index lists
-    indices_train = [] 
-    indices_vali = [] 
+    indices_train = []
+    indices_vali = []
     indices_test = []
     # Initialize counters for scaffolds in each set
     num_sc_train = 0
     num_sc_vali = 0
     num_sc_test = 0
 
-    # Go through the scaffolds from common to uncommon 
+    # Go through the scaffolds from common to uncommon
     # and fill the training, validation, and test sets
     for sc in scaffolds_ordered:
         # Get all indices of the current scaffold
-        scaffold_set = all_indices[np.array(scaffold_list)==sc].tolist()
+        scaffold_set = all_indices[np.array(scaffold_list) == sc].tolist()
         # ... and add them to their dataset
         if len(indices_train) < trainingset_size:
             indices_train += scaffold_set
@@ -179,16 +179,15 @@ def scaffold_split(scaffold_list, vali_split=0.1, test_split=0.1):
         else:
             indices_test += scaffold_set
             num_sc_test += 1
-            
+
     # Report number of scaffolds in each set
     logger.info(f'Scaffolds in the training set: {int(num_sc_train):}')
     logger.info(f'Scaffolds in the validation set: {int(num_sc_vali):}')
     logger.info(f'Scaffolds in the test set: {int(num_sc_test):}')
-    
+
     # Report number of scaffolds in each set
     logger.info(f'Size of the training set: {len(indices_train):}')
     logger.info(f'Size of the validation set: {len(indices_vali):}')
     logger.info(f'Size of the test set: {len(indices_test):}')
-    
-    return indices_train, indices_vali, indices_test
 
+    return indices_train, indices_vali, indices_test

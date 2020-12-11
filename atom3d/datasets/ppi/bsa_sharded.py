@@ -53,7 +53,7 @@ def _bsa_db(sharded, shard_num, output_bsa):
             curr_bsa_db = None
         tmp_elapsed_reading = timeit.default_timer() - start_time_reading
     elapsed_waiting = timeit.default_timer() - start_time_waiting - \
-        tmp_elapsed_reading
+                      tmp_elapsed_reading
     elapsed_reading += tmp_elapsed_reading
 
     start_time_processing = timeit.default_timer()
@@ -96,7 +96,7 @@ def _bsa_db(sharded, shard_num, output_bsa):
             os.rename(output_bsa + f'.tmp{shard_num:}', output_bsa)
             elapsed_writing = timeit.default_timer() - start_time_writing
         elapsed_waiting += timeit.default_timer() - start_time_waiting - \
-            elapsed_writing
+                           elapsed_writing
     else:
         elapsed_writing = 0
     elapsed = timeit.default_timer() - start_time

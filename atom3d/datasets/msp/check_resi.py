@@ -17,9 +17,9 @@ perjob = int(len(files) / int(num_jobs))
 
 nums = list(range(len(files)))
 if jobid == num_jobs - 1:
-    indices = nums[(jobid)*perjob:]
+    indices = nums[(jobid) * perjob:]
 else:
-    indices = nums[jobid*perjob: (jobid+1)*perjob]
+    indices = nums[jobid * perjob: (jobid + 1) * perjob]
 print(indices)
 
 log = []

@@ -16,11 +16,12 @@ def read_csv(csv_file):
             rows.append(row)
     return rows
 
+
 def pyro_mutate(rows, inputpdbs, outputdir):
     counter = 0
     for i in range(len(rows)):
-        if '1KBH' in rows[i][0] or '1JCK' in rows[i][0]: #skip 1KBH, 1JCK
-            print('skipping {}'.format(rows[i])) 
+        if '1KBH' in rows[i][0] or '1JCK' in rows[i][0]:  # skip 1KBH, 1JCK
+            print('skipping {}'.format(rows[i]))
             continue
         pdb, mutstr = rows[i][0], rows[i][1]
         fromres = mutstr[0]
@@ -28,13 +29,13 @@ def pyro_mutate(rows, inputpdbs, outputdir):
         tores = mutstr[-1]
         resnum = mutstr[2:-1]
 
-        new_file = pdb + '_' + mutstr + '.pdb' 
+        new_file = pdb + '_' + mutstr + '.pdb'
 
         if os.path.exists(os.path.join(outputdir, new_file)):
             print('{} was already handled'.format(rows[i]))
             counter += 1
             continue
-        
+
         p = pose_from_pdb(os.path.join(inputpdbs, pdb + '.pdb'))
         pyro_resi = p.pdb_info().pdb2pose(chain, int(resnum))
 
@@ -46,6 +47,7 @@ def pyro_mutate(rows, inputpdbs, outputdir):
     print('Done mutating all files')
     print(str(counter) + ' files mutated.')
 
+
 def main():
     pyrosetta.init()
     inputcsv = sys.argv[1]
@@ -53,5 +55,6 @@ def main():
     outputdir = sys.argv[3]
     rows = read_csv(inputcsv)
     pyro_mutate(rows, inputpdbs, outputdir)
+
 
 main()

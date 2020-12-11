@@ -40,7 +40,7 @@ def get_target_name(f):
     else:
         # We keep bound and free denotation if puzzle 14.
         target_name = str(target_number) + \
-            ('b' if 'bound' in name else 'f')
+                      ('b' if 'bound' in name else 'f')
     return target_name
 
 
@@ -49,8 +49,8 @@ def load_scores(score_dir):
     score_files = fi.find_files(score_dir, 'sc')
     scores = {
         get_target_name(f):
-        pd.read_csv(f, delimiter='\s*', index_col='description',
-                    engine='python')
+            pd.read_csv(f, delimiter='\s*', index_col='description',
+                        engine='python')
         for f in score_files
     }
     # If duplicate structures present, remove all but first.

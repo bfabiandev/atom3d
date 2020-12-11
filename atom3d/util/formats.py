@@ -49,6 +49,7 @@ def is_pdb_gz(f):
     """If file is in mmcif format."""
     return _regexes['pdb.gz'].search(str(f))
 
+
 def is_xyz(f):
     """If file is in xyz format."""
     return _regexes['xyz'].search(str(f))
@@ -100,12 +101,12 @@ def read_sdf(sdf_file, name=None, sanitize=False, add_hs=False, remove_hs=False)
     dflist = []
     molecules = read_sdf_to_mol(sdf_file, sanitize=sanitize,
                                 add_hs=add_hs, remove_hs=remove_hs)
-    for im,m in enumerate(molecules):
+    for im, m in enumerate(molecules):
         if m is not None:
             df = mol_to_df(m, residue=im,
-                           ensemble = m.GetProp("_Name"),
-                           structure = m.GetProp("_Name"),
-                           model = m.GetProp("_Name"))
+                           ensemble=m.GetProp("_Name"),
+                           structure=m.GetProp("_Name"),
+                           model=m.GetProp("_Name"))
             dflist.append(df)
     assert len(dflist) >= 1
     if len(dflist) > 1:
@@ -121,12 +122,12 @@ def read_sdf_multi(sdf_files, name=None, sanitize=False, add_hs=False, remove_hs
     for sdf_file in sdf_files:
         molecules = read_sdf_to_mol(sdf_file, sanitize=sanitize,
                                     add_hs=add_hs, remove_hs=remove_hs)
-        for im,m in enumerate(molecules):
+        for im, m in enumerate(molecules):
             if m is not None:
                 df = mol_to_df(m, residue=im,
-                               ensemble = m.GetProp("_Name"),
-                               structure = m.GetProp("_Name"),
-                               model = m.GetProp("_Name"))
+                               ensemble=m.GetProp("_Name"),
+                               structure=m.GetProp("_Name"),
+                               model=m.GetProp("_Name"))
                 dflist.append(df)
     bp = df_to_bp(merge_dfs(dflist))
     return bp
@@ -173,9 +174,9 @@ def read_xyz_to_df(inputfile, gdb_data=False):
             freq = [float(ll) for ll in f.readline().strip().split('\t')]
         # SMILES and InChI
         if gdb_data: smiles = f.readline().strip().split('\t')[0]
-        if gdb_data: inchi  = f.readline().strip().split('\t')[0]
+        if gdb_data: inchi = f.readline().strip().split('\t')[0]
     # Define columns: element, x, y, z, Mulliken charges (GDB only)
-    columns = ['element','x', 'y', 'z']
+    columns = ['element', 'x', 'y', 'z']
     if gdb_data: columns += ['charge']
     # Load atom information
     molecule = pd.read_table(inputfile, names=columns,
@@ -207,21 +208,21 @@ def read_xyz(xyz_file, name=None, gdb=False):
     new_name = []
     for el in df['element']:
         el_count[el] += 1
-        new_name.append('%s%i'%(el,el_count[el]))
+        new_name.append('%s%i' % (el, el_count[el]))
     # Fill additional fields
-    df['ensemble'] = [df.name.replace(' ','_')]*len(df)
-    df['subunit'] = [0]*len(df)
-    df['structure'] = [df.name.replace(' ','_')]*len(df)
-    df['model'] = [0]*len(df)
-    df['chain'] = ['L']*len(df)
-    df['hetero'] = ['']*len(df)
-    df['insertion_code'] = ['']*len(df)
-    df['residue'] = [1]*len(df)
-    df['segid'] = ['LIG']*len(df)
-    df['resname'] = ['LIG']*len(df)
-    df['altloc'] = ['']*len(df)
-    df['occupancy'] = [1.]*len(df)
-    df['bfactor'] = [0.]*len(df)
+    df['ensemble'] = [df.name.replace(' ', '_')] * len(df)
+    df['subunit'] = [0] * len(df)
+    df['structure'] = [df.name.replace(' ', '_')] * len(df)
+    df['model'] = [0] * len(df)
+    df['chain'] = ['L'] * len(df)
+    df['hetero'] = [''] * len(df)
+    df['insertion_code'] = [''] * len(df)
+    df['residue'] = [1] * len(df)
+    df['segid'] = ['LIG'] * len(df)
+    df['resname'] = ['LIG'] * len(df)
+    df['altloc'] = [''] * len(df)
+    df['occupancy'] = [1.] * len(df)
+    df['bfactor'] = [0.] * len(df)
     df['name'] = new_name
     df['fullname'] = new_name
     df['serial_number'] = range(len(df))
@@ -479,8 +480,8 @@ def get_bonds_list_from_mol(mol):
         atom1 = b.GetBeginAtomIdx()
         atom2 = b.GetEndAtomIdx()
         btype = b.GetBondTypeAsDouble()
-        bonds_list.append([atom1,atom2,btype])
-    col = ['atom1','atom2','type']
+        bonds_list.append([atom1, atom2, btype])
+    col = ['atom1', 'atom2', 'type']
     bonds_df = pd.DataFrame(bonds_list, columns=col)
     return bonds_df
 
@@ -522,7 +523,7 @@ def mol_to_df(mol, add_hs=False, structure=None, model=None, ensemble=None, resi
     new_name = []
     for el in df['element']:
         el_count[el] += 1
-        new_name.append('%s%i'%(el,el_count[el]))
+        new_name.append('%s%i' % (el, el_count[el]))
     df['name'] = new_name
     df['fullname'] = new_name
     return df
@@ -536,4 +537,3 @@ def get_coordinates_from_df(df):
     xyz[:, 2] = np.array(df.z)
 
     return xyz
-

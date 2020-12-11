@@ -9,7 +9,6 @@ import atom3d.util.log as log
 
 logger = log.get_logger('neighbors')
 
-
 index_columns = \
     ['ensemble', 'subunit', 'structure', 'model', 'chain', 'residue']
 
@@ -20,11 +19,11 @@ index_columns = \
 @click.argument('output_labels', type=click.Path())
 @click.option('-c', '--cutoff', type=int, default=8,
               help='Maximum distance (in angstroms), for two residues to be '
-              'considered neighbors.')
+                   'considered neighbors.')
 @click.option('--cutoff-type', default='CA',
               type=click.Choice(['heavy', 'CA'], case_sensitive=False),
               help='How to compute distance between residues: CA is based on '
-              'alpha-carbons, heavy is based on any heavy atom.')
+                   'alpha-carbons, heavy is based on any heavy atom.')
 def get_neighbors_main(sharded_path, ensemble, output_labels, cutoff,
                        cutoff_type):
     sharded = sh.Sharded.load(sharded_path)
