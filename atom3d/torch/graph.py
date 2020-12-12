@@ -90,7 +90,7 @@ def mol_to_graph(mol):
         node_pos (FloatTensor): x-y-z coordinates of each node
     """
     node_pos = torch.FloatTensor(dt.get_coordinates_of_conformer(mol))
-    bonds = dt.get_bonds_matrix(mol)
+    bonds = dt.get_bonds_matrix_from_mol(mol)
     edge_tuples = np.argwhere(bonds)
     edges = torch.LongTensor(edge_tuples).t().contiguous()
 
