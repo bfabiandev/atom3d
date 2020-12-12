@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import torch
 from torch_geometric.data import Dataset, Data, DataLoader
+from tqdm import tqdm
 
 from atom3d.datasets.lba.get_labels import get_label
 from atom3d.splits import splits as sp
@@ -51,7 +52,7 @@ class GraphPDBBind(Dataset):
         label_file = os.path.join(self.raw_dir, 'pdbbind_refined_set_labels.csv')
         label_df = pd.read_csv(label_file)
         i = 0
-        for raw_path in self.raw_paths:
+        for raw_path in tqdm(self.raw_paths):
             pdb_code = fi.get_pdb_code(raw_path)
             y = torch.FloatTensor([get_label(pdb_code, label_df)])
             if '_ligand' in raw_path:
@@ -59,7 +60,7 @@ class GraphPDBBind(Dataset):
                 mol_graph = graph.mol_to_graph(dt.read_sdf_to_mol(raw_path, add_h=False)[0])
             elif '_pocket' in raw_path:
                 prot_graph = graph.prot_df_to_graph(dt.bp_to_df(dt.read_any(raw_path, name=pdb_code)))
-                node_feats, edge_index, edge_feats, pos = graph.combine_graphs(prot_graph, mol_graph,
+                node_feats, edge_index, edge_feats, pos = graph.combine_graphs(prot_graph, mol_graph, # WTF, are we assuming mol graph is always the right graph?? Dangerous!!
                                                                                edges_between=True)
                 data = Data(node_feats, edge_index, edge_feats, y=y, pos=pos)
                 data.pdb = pdb_code
