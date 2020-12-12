@@ -48,7 +48,7 @@ class GraphPDBBind(Dataset):
         return self.pdb_idx_dict.get(pdb)
 
     def process(self):
-        label_file = os.path.join(self.root, 'pdbbind_refined_set_labels.csv')
+        label_file = os.path.join(self.raw_dir, 'pdbbind_refined_set_labels.csv')
         label_df = pd.read_csv(label_file)
         i = 0
         for raw_path in self.raw_paths:
