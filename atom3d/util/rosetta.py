@@ -11,19 +11,16 @@ import atom3d.util.file as fi
 
 class Scores(object):
     """
-    Track and lookup Rosetta score files.
+    Class for tracking and looking up Rosetta score files.
 
-    Args:
-        data_path (Union[str, Path, list[str, Path]]):
-            Path to silent files.
+    :param file_list: List of paths to Rosetta silent files.
+    :type file_list: list[Union[str, Path]]
     """
 
-    def __init__(self, data_path):
+    def __init__(self, file_list):
         self._scores = {}
-        score_paths = fi.find_files(data_path, 'sc')
-        if len(score_paths) == 0:
-            raise RuntimeError('No score files found.')
-        for silent_file in score_paths:
+        file_list = [Path(x).absolute() for x in file_list]
+        for silent_file in file_list:
             key = self._key_from_silent_file(silent_file)
             self._scores[key] = self._parse_scores(silent_file)
 
@@ -47,14 +44,16 @@ class Scores(object):
         file_path = Path(file_path)
         key = (file_path.stem, file_path.name)
         if key in self._scores.index:
-            return self._scores.loc[key]
+            return key, self._scores.loc[key]
         key = (file_path.parent.stem, file_path.stem)
         if key in self._scores.index:
-            return self._scores.loc[key]
-        return None
+            return key, self._scores.loc[key]
+        return None, None
 
     def __call__(self, x, error_if_missing=False):
-        x['scores'] = self._lookup(x['file_path'])
+        key, x['scores'] = self._lookup(x['file_path'])
+        if key is not None:
+            x['id'] = str(key)
         if x['scores'] is None and error_if_missing:
             raise RuntimeError(f'Unable to find scores for {x["file_path"]}')
         return x
@@ -67,3 +66,7 @@ class Scores(object):
             if entry is not None:
                 result.append(file_path)
         return result
+
+    def __len__(self):
+        """Get number of individual structures across score files."""
+        return len(self._scores)

@@ -1,3 +1,4 @@
+"""TODO: This code has been significantly re-written and should be tested."""
 import math
 import random
 
@@ -6,6 +7,7 @@ import numpy as np
 import atom3d.protein.sequence as seq
 import atom3d.util.file as fi
 import atom3d.util.log as log
+import atom3d.splits.splits as splits
 
 logger = log.get_logger('sequence_splits')
 
@@ -16,44 +18,45 @@ logger = log.get_logger('sequence_splits')
 ####################################
 
 
-def cluster_split(all_chain_sequences, cutoff, val_split=0.1,
+def cluster_split(dataset, cutoff, val_split=0.1,
                   test_split=0.1, min_fam_in_split=5, random_seed=None):
-    """
-    Splits pdb dataset using pre-computed sequence identity clusters from PDB.
+    """Splits pdb dataset using pre-computed sequence identity clusters from PDB, ensuring that no cluster spans multiple splits. 
 
-    Generates train, val, test sets.
+    Clusters are selected randomly into validation and test sets, but to ensure that there is some diversity in each set (i.e. a split does not consist of a single sequence cluster), a minimum number of clusters in each split is enforced. . Some data examples may be removed in order to satisfy this constraint.
+    
+    This function assumes that the PDB code or PDB filename exists in the ``ensemble`` field of the ``atoms`` dataframe in the dataset.
 
-    Args:
-        all_chain_sequences ((str, chain_sequences)[]):
-            tuple of pdb ids and chain_sequences in dataset
-        cutoff (float):
-            sequence identity cutoff (can be .3, .4, .5, .7, .9, .95, 1.0)
-        val_split (float): fraction of data used for validation. Default: 0.1
-        test_split (float): fraction of data used for testing. Default: 0.1
-        min_fam_in_split (int): controls variety of val/test sets. Default: 5
-        random_seed (int):  specifies random seed for shuffling. Default: None
+    :param dataset: Dataset to perform the split on.
+    :type dataset: ATOM3D Dataset
+    :param cutoff: Sequence identity cutoff. Possible values: 0.3, 0.4, 0.5, 0.7, 0.9, 0.95, 1.0
+    :type cutoff: float
+    :param val_split: Fraction of data used in validation set, defaults to 0.1
+    :type val_split: float, optional
+    :param test_split: Fraction of data used in test set, defaults to 0.1
+    :type test_split: float, optional
+    :param min_fam_in_split: Minimum number of sequence clusters to be included in validation and test sets, defaults to 5
+    :type min_fam_in_split: int, optional
+    :param random_seed: Random seed for sampling clusters, defaults to None
+    :type random_seed: int, optional
 
-    Returns:
-        train_set (str[]):  pdbs in the train set
-        val_set (str[]):  pdbs in the validation set
-        test_set (str[]): pdbs in the test set
-
-    """
+    :return: Tuple containing training, validation, and test sets, each as ATOM3D Dataset objects.
+    :rtype: Tuple[Dataset]
+    """    
+    
     if random_seed is not None:
         np.random.seed(random_seed)
 
-    pdb_codes = \
-        np.unique([fi.get_pdb_code(x[0]) for (x, _) in all_chain_sequences])
-    n_orig = len(pdb_codes)
-    clusterings = seq.get_pdb_clusters(cutoff, pdb_codes)
+    logger.info('Loading chain sequences')
+    all_chain_sequences = [seq.get_chain_sequences(x['atoms']) for x in dataset]
+
+    pdb_codes = np.array([fi.get_pdb_code(x[0][0][0]) for x in all_chain_sequences])
+    n_orig = len(np.unique(pdb_codes))
+    clusterings = seq.get_pdb_clusters(cutoff, np.unique(pdb_codes))
 
     # If code not present in clustering, we don't use.
-    all_chain_sequences = \
-        [(x, cs) for (x, cs) in all_chain_sequences
-         if fi.get_pdb_code(x[0]) in clusterings[0]]
-    pdb_codes = \
-        np.unique([fi.get_pdb_code(x[0]) for (x, _) in all_chain_sequences])
-    n = len(pdb_codes)
+    to_use = [i for (i, x) in enumerate(pdb_codes) if x in clusterings[0]]
+    n = len(np.unique(pdb_codes[to_use]))
+    to_use = set(to_use)
 
     logger.info(
         f'Removing {n_orig - n:} / {n_orig:} '
@@ -62,54 +65,44 @@ def cluster_split(all_chain_sequences, cutoff, val_split=0.1,
     test_size = n * test_split
     val_size = n * val_split
 
-    np.random.shuffle(all_chain_sequences)
-
     logger.info('generating validation set...')
-    val_set, all_chain_sequences = create_cluster_split(
-        all_chain_sequences, clusterings, val_size, min_fam_in_split)
+    val_indices, to_use = _create_cluster_split(
+        all_chain_sequences, clusterings, to_use, val_size, min_fam_in_split)
     logger.info('generating test set...')
-    test_set, all_chain_sequences = create_cluster_split(
-        all_chain_sequences, clusterings, test_size, min_fam_in_split)
-    train_set = all_chain_sequences
+    test_indices, to_use = _create_cluster_split(
+        all_chain_sequences, clusterings, to_use, test_size, min_fam_in_split)
+    train_indices = to_use
 
-    train_set = [x[0] for x in train_set]
-    val_set = [x[0] for x in val_set]
-    test_set = [x[0] for x in test_set]
-
-    logger.info(f'train size {len(train_set):}')
-    logger.info(f'val size {len(val_set):}')
-    logger.info(f'test size {len(test_set):}')
-
-    return train_set, val_set, test_set
+    return splits.split(dataset, train_indices, val_indices, test_indices)
 
 
-def create_cluster_split(all_chain_sequences, clusterings, split_size, min_fam_in_split):
+def _create_cluster_split(all_chain_sequences, clusterings, to_use, split_size, min_fam_in_split):
     """
-    Create a split while retaining diversity specified by min_fam_in_split.
-    Returns split and removes any pdbs in this split from the remaining dataset
+    Helper function for :func:`create_cluster_split`. Creates a single split of ``split_size`` elements while retaining diversity specified by ``min_fam_in_split``.
+    Takes in ``all_chain_sequences`` and reference ``clusterings`` from PDB, as well as a list of valid indices to sample from, specified by ``to_use``.
+    Returns indices of new split and indices remaining in dataset after removing those used in split.
     """
-    pdb_ids = np.array(
-        [fi.get_pdb_code(p[0]) for (p, _) in all_chain_sequences])
-    split = set()
-    idx = 0
+    dataset_size = len(all_chain_sequences)
+    code_to_idx = {fi.get_pdb_code(y[0][0]): i for (i, x) in enumerate(all_chain_sequences) for y in x}
+
+    all_indices = set(range(dataset_size))
+    split, used = set(), all_indices.difference(to_use)
     while len(split) < split_size:
-        (rand_id, _) = all_chain_sequences[idx]
-        pdb_code = fi.get_pdb_code(rand_id[0])
-        hits = seq.find_cluster_members(pdb_code, clusterings)
+        i = random.sample(to_use, 1)[0]
+        pdb_code = fi.get_pdb_code(all_chain_sequences[i][0][0][0])
+        found = seq.find_cluster_members(pdb_code, clusterings)
+
+        # Map back to source.
+        found = set([code_to_idx[x] for x in found])
+        found = found.difference(used)
+
         # ensure that at least min_fam_in_split families in each split
-        if len(hits) > split_size / min_fam_in_split:
-            idx += 1
-            continue
-        split = split.union(hits)
-        idx += 1
+        max_fam_size = int(math.ceil(split_size / min_fam_in_split))
+        split = split.union(list(found)[:max_fam_size])
+        to_use = to_use.difference(found)
+        used = used.union(found)
 
-    matches = np.array([i for i, x in enumerate(pdb_ids) if x in split])
-    selected_chain_sequences = \
-        [x for i, x in enumerate(all_chain_sequences) if i in matches]
-    remaining_chain_sequences = \
-        [x for i, x in enumerate(all_chain_sequences) if i not in matches]
-
-    return selected_chain_sequences, remaining_chain_sequences
+    return split, to_use
 
 
 ####################################
@@ -119,89 +112,85 @@ def create_cluster_split(all_chain_sequences, clusterings, split_size, min_fam_i
 
 
 def identity_split(
-        all_chain_sequences, cutoff, val_split=0.1, test_split=0.1,
+        dataset, cutoff, val_split=0.1, test_split=0.1,
         min_fam_in_split=5, blast_db=None, random_seed=None):
-    """
-    Splits pdb dataset using pre-computed sequence identity clusters from PDB.
+    """Splits a dataset of proteins by sequence identity at specified cutoff value. Proteins are randomly selected to be placed in validation and test splits, along with all proteins within ``cutoff`` sequence identity (calculated by BLAST).
 
-    Generates train, val, test sets.
+        To ensure that there is some diversity in each set (i.e. a split does not consist of a single sequence cluster), a minimum number of clusters in each split is enforced. Some data examples may be removed in order to satisfy this constraint.
 
-    Args:
-        all_chain_sequences ((str, chain_sequences)[]):
-            tuple of pdb ids and chain_sequences in dataset
-        cutoff (float):
-            sequence identity cutoff (can be .3, .4, .5, .7, .9, .95, 1.0)
-        val_split (float): fraction of data used for validation. Default: 0.1
-        test_split (float): fraction of data used for testing. Default: 0.1
-        min_fam_in_split (int): controls variety of val/test sets. Default: 5
-        blast_db (str):
-            location of pre-computed BLAST DB for dataset. If None, compute and
-            save in 'blast_db'. Default: None
-        random_seed (int):  specifies random seed for shuffling. Default: None
+        Note that the construction of this function means that it is effectively a cluster split. All examples within ``cutoff`` of the sampled query protein are added to validation set, meaning that some examples near the edge of the cluster may in fact share less than ``cutoff`` sequence identity with other proteins in the dataset.
+        Therefore, this does not satisfy the constraints for a strict sequence identity cutoff: that 
+        (1) no protein in validation split shares greater than ``cutoff`` sequence identity with any protein in the train set, and 
+        (2) no protein in the test split shares greater than ``cutoff`` sequence identity with any protein in either train or validation sets.
+        A function that satisfies this more strict definition is currently under development.
 
-    Returns:
-        train_set (str[]):  pdbs in the train set
-        val_set (str[]):  pdbs in the validation set
-        test_set (str[]): pdbs in the test set
 
-    """
+
+    :param dataset: Dataset to perform the split on.
+    :type dataset: ATOM3D Dataset
+    :param cutoff: Sequence identity cutoff, between 0 and 1
+    :type cutoff: float
+    :param val_split: Fraction of data used in validation set, defaults to 0.1
+    :type val_split: float, optional
+    :param test_split: Fraction of data used in test set, defaults to 0.1
+    :type test_split: float, optional
+    :param min_fam_in_split: Minimum number of sequence clusters to be included in validation and test sets, defaults to 5
+    :type min_fam_in_split: int, optional
+    :param random_seed: Random seed for sampling clusters, defaults to None
+    :type random_seed: int, optional
+
+    :return: Tuple containing training, validation, and test sets, each as ATOM3D Dataset objects.
+    :rtype: Tuple[Dataset]
+    """        
+
+    all_chain_sequences = [seq.get_chain_sequences(x['atoms']) for x in dataset]
+    # Flatten.
+    flat_chain_sequences = [x for sublist in all_chain_sequences for x in sublist]
+
+    # write all sequences to BLAST-formatted database
     if blast_db is None:
-        seq.write_to_blast_db(all_chain_sequences, 'blast_db')
+        seq.write_to_blast_db(flat_chain_sequences, 'blast_db')
         blast_db = 'blast_db'
 
     if random_seed is not None:
         np.random.seed(random_seed)
 
-    pdb_codes = \
-        np.unique([fi.get_pdb_code(x[0]) for (x, _) in all_chain_sequences])
-    n = len(pdb_codes)
+    n = len(dataset)
     test_size = n * test_split
     val_size = n * val_split
 
-    np.random.shuffle(all_chain_sequences)
-
+    to_use = set(range(len(all_chain_sequences)))
     logger.info('generating validation set...')
-    val_set, all_chain_sequences = create_identity_split(
-        all_chain_sequences, cutoff, val_size, min_fam_in_split, blast_db)
+    val_indices, to_use = _create_identity_split(
+        all_chain_sequences, cutoff, to_use, val_size, min_fam_in_split, blast_db)
     logger.info('generating test set...')
-    test_set, all_chain_sequences = create_identity_split(
-        all_chain_sequences, cutoff, test_size, min_fam_in_split, blast_db)
-    train_set = all_chain_sequences
+    test_indices, to_use = _create_identity_split(
+        all_chain_sequences, cutoff, to_use, test_size, min_fam_in_split, blast_db)
+    train_indices = to_use
 
-    train_set = [x[0] for x in train_set]
-    val_set = [x[0] for x in val_set]
-    test_set = [x[0] for x in test_set]
-
-    logger.info(f'train size {len(train_set):}')
-    logger.info(f'val size {len(val_set):}')
-    logger.info(f'test size {len(test_set):}')
-
-    return train_set, val_set, test_set
+    return splits.split(dataset, train_indices, val_indices, test_indices)
 
 
-def create_identity_split(all_chain_sequences, cutoff, split_size,
-                          min_fam_in_split, blast_db):
+def _create_identity_split(all_chain_sequences, cutoff, to_use, split_size,
+                           min_fam_in_split, blast_db):
     """
-    Create a split while retaining diversity specified by min_fam_in_split.
-    Returns split and removes any pdbs in this split from the remaining dataset
+    Helper function for :func:`create_cluster_split`. Creates a single split of ``split_size`` elements while retaining diversity specified by ``min_fam_in_split``.
+    Takes in ``all_chain_sequences`` and reference ``blast_db``, as well as a list of valid indices to sample from, specified by ``to_use``.
+    Returns indices of new split and indices remaining in dataset after removing those used in split.
     """
     dataset_size = len(all_chain_sequences)
-    tmp = {x: y for (x, y) in all_chain_sequences}
-    assert len(tmp) == len(all_chain_sequences)
-    all_chain_sequences = tmp
+    chain_to_idx = {y[0]: i for (i, x) in enumerate(all_chain_sequences) for y in x}
 
-    # Get structure tuple.
-    split, used = set(), set()
-    to_use = set(all_chain_sequences.keys())
+    all_indices = set(range(dataset_size))
+    split, used = set(), all_indices.difference(to_use)
     while len(split) < split_size:
-        # Get random structure tuple and random chain_sequence.
-        rstuple = random.sample(to_use, 1)[0]
-        rcs = all_chain_sequences[rstuple]
+        i = random.sample(to_use, 1)[0]
 
-        found = seq.find_similar(rcs, blast_db, cutoff, dataset_size)
-
-        # Get structure tuples.
-        found = set([seq.fasta_name_to_tuple(x)[0] for x in found])
+        # Get chains that match.
+        found = seq.find_similar(all_chain_sequences[i], blast_db, cutoff, dataset_size)
+        # Map back to source.
+        found = set([chain_to_idx[x] for x in found])
+        found = found.difference(used)
 
         # ensure that at least min_fam_in_split families in each split
         max_fam_size = int(math.ceil(split_size / min_fam_in_split))
@@ -209,9 +198,4 @@ def create_identity_split(all_chain_sequences, cutoff, split_size,
         to_use = to_use.difference(found)
         used = used.union(found)
 
-    selected_chain_sequences = \
-        [(s, cs) for s, cs in all_chain_sequences.items() if s in split]
-    remaining_chain_sequences = \
-        [(s, cs) for s, cs in all_chain_sequences.items() if s in to_use]
-
-    return selected_chain_sequences, remaining_chain_sequences
+    return split, to_use

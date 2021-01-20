@@ -1,10 +1,37 @@
 """Functions for splitting data into test, validation, and training sets."""
+from functools import partial
 
 import numpy as np
+import torch
 
 import atom3d.util.log as log
 
 logger = log.get_logger('splits')
+
+
+def split(dataset, indices_train, indices_val, indices_test):
+    """Split a dataset into train, validation, and test datasets according to specified indices.
+
+    :param dataset: Dataset to split.
+    :type dataset: Dataset
+    :param indices_train: List of indices comprising training set.
+    :type indices_train: List[int]
+    :param indices_val: List of indices comprising validation set.
+    :type indices_val: List[int]
+    :param indices_test: List of indices comprising test set.
+    :type indices_test: List[int]
+    :return: Tuple of train, validation, and test datasets
+    :rtype: Tuple[Dataset]
+    """    
+    train_dataset = torch.utils.data.Subset(dataset, indices_train)
+    val_dataset = torch.utils.data.Subset(dataset, indices_val)
+    test_dataset = torch.utils.data.Subset(dataset, indices_test)
+
+    logger.info(f'Size of the training set: {len(indices_train):}')
+    logger.info(f'Size of the validation set: {len(indices_val):}')
+    logger.info(f'Size of the test set: {len(indices_test):}')
+
+    return train_dataset, val_dataset, test_dataset
 
 
 def read_split_file(split_file):
@@ -28,166 +55,154 @@ def read_split_file(split_file):
 # split randomly
 ####################################
 
-def random_split(dataset_size, train_split=None, vali_split=0.1,
-                 test_split=0.1, shuffle=True, random_seed=None, exclude=None):
-    """Creates data indices for training and validation splits.
+def split_randomly(dataset, train_split=None, val_split=0.1, test_split=0.1, random_seed=0):
+    """Split a dataset into train, validation and test datasets at random.
 
-        Args:
-            dataset_size (int): number of elements in the dataset
-            train_split (float):
-                fraction of data used for training. Default: 0.1
-            vali_split (float):
-                fraction of data used for validation. Default: 0.1
-            test_split (float): fraction of data used for testing. Default: 0.1
-            shuffle (bool):     indices are shuffled. Default: True
-            random_seed (int):
-                specifies random seed for shuffling. Default: None
-            exclude (np.array of int):  indices to exclude.
-
-
-        Returns:
-            indices_test (int[]):  indices of the test set.
-            indices_vali (int[]):  indices of the validation set.
-            indices_train (int[]): indices of the training set.
-
-    """
+    :param dataset: Dataset to split.
+    :type dataset: Dataset
+    :param train_split: Proportion of data used for training. If None, use all data not in validation or test, defaults to None.
+    :type train_split: float, optional
+    :param val_split: Proportion of data used for validation, defaults to 0.1
+    :type val_split: float, optional
+    :param test_split: Proportion of data used for testing, defaults to 0.1
+    :type test_split: float, optional
+    :param random_seed: Random seed for splitting, defaults to 0
+    :type random_seed: int, optional
+    :return: Tuple of train, validation, and test datasets
+    :rtype: Tuple[Dataset]
+    """    
 
     # Initialize the indices
-    all_indices = np.arange(dataset_size, dtype=int)
-    logger.info(f'Splitting dataset with {len(all_indices):} entries.')
-
-    # Delete all indices that shall be excluded
-    if exclude is None:
-        indices = all_indices
-    else:
-        logger.info('Excluding', len(exclude), 'entries.')
-        to_keep = np.invert(np.isin(all_indices, exclude))
-        indices = all_indices[to_keep]
-        logger.info('Remaining', len(indices), 'entries.')
-    num_indices = len(indices)
+    num_indices = len(dataset)
+    indices = np.arange(num_indices, dtype=int)
+    logger.info(f'Splitting dataset with {num_indices:} entries.')
 
     # Calculate the numbers of elements per split
-    vsplit = int(np.floor(vali_split * num_indices))
-    tsplit = int(np.floor(test_split * num_indices))
+    num_val = int(np.floor(val_split * num_indices))
+    num_test = int(np.floor(test_split * num_indices))
     if train_split is not None:
-        train = int(np.floor(train_split * num_indices))
+        num_train = int(np.floor(train_split * num_indices))
     else:
-        train = num_indices - vsplit - tsplit
+        num_train = num_indices - num_val - num_test
 
-    # Shuffle the dataset if desired
-    if shuffle:
-        if random_seed is not None:
-            np.random.seed(random_seed)
-        np.random.shuffle(indices)
+    # Shuffle the dataset indices
+    np.random.seed(random_seed)
+    np.random.shuffle(indices)
 
     # Determine the indices of each split
-    indices_test = indices[:tsplit]
-    indices_vali = indices[tsplit:tsplit + vsplit]
-    indices_train = indices[tsplit + vsplit:tsplit + vsplit + train]
+    indices_train = indices[:num_train]
+    indices_val = indices[num_train:(num_train + num_val)]
+    indices_test = indices[(num_train + num_val):(num_train + num_val + num_test)]
 
-    return indices_test, indices_vali, indices_train
-
-
-####################################
-# split by time
-####################################
-
-
-def time_split(data, val_years, test_years):
-    """
-    Splits data into train, val, test by year.
-
-    Args:
-        data (DataFrame): year data, with columns named 'pdb' and 'year'
-        val_years (str[]): years to include in validation set
-        test_years (str[]): years to include in test set
-
-    Returns:
-        train_set (str[]):  pdbs in the train set
-        val_set (str[]):  pdbs in the validation set
-        test_set (str[]): pdbs in the test set
-    """
-    val = data[data.year.isin(val_years)]
-    test = data[data.year.isin(test_years)]
-    train = data[~data.pdb.isin(val.pdb.tolist() + test.pdb.tolist())]
-
-    train_set = train['pdb'].tolist()
-    val_set = val['pdb'].tolist()
-    test_set = test['pdb'].tolist()
-
-    return train_set, val_set, test_set
+    return split(dataset, indices_train, indices_val, indices_test)
 
 
 ####################################
-# split by scaffold
+# split by group
+####################################
+
+def split_by_group(dataset, value_fn, train_values, val_values, test_values):
+    """Splits data into train, validation, and test dataset using a value function that maps each data element to a value (or group identifier). These are then used to assign elements to the appropriate splits based on pre-defined lists of values to include in each split.
+
+    :param dataset: Dataset to split.
+    :type dataset: Dataset
+    :param value_fn: Arbitrary function mapping each data element to a value or group identifier.
+    :type value_fn: function
+    :param train_values: List of values to include in training set.
+    :type train_values: List
+    :param val_values: List of values to include in validation set.
+    :type val_values: List
+    :param test_values: List of values to include in test set.
+    :type test_values: List
+    :return: Tuple of train, validation, and test datasets
+    :rtype: Tuple[Dataset]
+    """    
+
+    values = [value_fn(x) for x in dataset]
+
+    # Determine the indices of each split
+    indices_train = [i for i,x in enumerate(values) if x in train_values]
+    indices_val = [i for i,x in enumerate(values) if x in val_values]
+    indices_test = [i for i,x in enumerate(values) if x in test_values]
+    return split(dataset, indices_train, indices_val, indices_test)
+
+
+####################################
+# split by group size
 ####################################
 
 
-def scaffold_split(scaffold_list, vali_split=0.1, test_split=0.1):
-    """Creates data indices for training and validation splits according to a scaffold split.
-        Args:
-            scaffold_list (array ofstr): names of the scaffolds
-            train_split (float):
-                fraction of data used for training. Default: 0.1
-            vali_split (float):
-                fraction of data used for validation. Default: 0.1
-            test_split (float): fraction of data used for testing. Default: 0.1
-            random_seed (int):
-                specifies random seed for shuffling. Default: None
-            exclude (np.array of int):  indices to exclude.
-        Returns:
-            indices_train (int[]):  indices of the training set.
-            indices_vali (int[]):  indices of the validation set.
-            indices_test (int[]): indices of the test set.
-    """
+def split_by_group_size(dataset, value_fn, val_split=0.1, test_split=0.1):
+    """Splits data into train, validation, and test dataset using a value function that maps each data element to a value (or group identifier). Elements are grouped by the value returned by this value function, and groups are sorted by size. 
+    The groups are then added first to train, then to validation, then to test splits in order of group size, so that the largest groups (i.e. most common examples)  are in train and the smallest groups (i.e. less common examples) are in test. 
+    Each split is filled iteratively up to the sizes specified by ``val_split`` and ``test_split``.
 
-    logger.info(f'Splitting dataset with {len(scaffold_list):} entries.')
+    :param dataset: Dataset to split.
+    :type dataset: Dataset
+    :param value_fn: Arbitrary function mapping each data element to a value or group identifier.
+    :type value_fn: function
+    :param val_split: Proportion of data used for validation, defaults to 0.1
+    :type val_split: float, optional
+    :param test_split: Proportion of data used for testing, defaults to 0.1
+    :type test_split: float, optional
+    :return: Tuple of train, validation, and test datasets.
+    :rtype: Tuple[Dataset]
+    """    
+
+    values = [value_fn(x) for x in dataset]
+
+    logger.info(f'Splitting dataset with {len(values):} entries.')
 
     # Calculate the target sizes of the splits
-    dataset_size = len(scaffold_list)
+    dataset_size = len(values)
     all_indices = np.arange(dataset_size)
-    testset_size = test_split * dataset_size
-    valiset_size = vali_split * dataset_size
-    trainingset_size = dataset_size - valiset_size - testset_size
+    test_size = test_split * dataset_size
+    val_size = val_split * dataset_size
+    train_size = dataset_size - val_size - test_size
 
-    # Order the scaffolds from common to uncommon
-    scaffolds, counts = np.unique(scaffold_list, return_counts=True)
+    # Order the scaffolds from common to uncommon 
+    unique_values, counts = np.unique(values, return_counts=True)
     order = np.argsort(counts)[::-1]
-    scaffolds_ordered = scaffolds[order]
+    values_ordered = unique_values[order]
 
     # Initialize index lists
     indices_train = []
-    indices_vali = []
+    indices_val = []
     indices_test = []
     # Initialize counters for scaffolds in each set
     num_sc_train = 0
-    num_sc_vali = 0
+    num_sc_val = 0
     num_sc_test = 0
 
-    # Go through the scaffolds from common to uncommon
+    # Go through the scaffolds from common to uncommon 
     # and fill the training, validation, and test sets
-    for sc in scaffolds_ordered:
+    for sc in values_ordered:
         # Get all indices of the current scaffold
-        scaffold_set = all_indices[np.array(scaffold_list) == sc].tolist()
+        curr_group = all_indices[np.array(values) == sc].tolist()
         # ... and add them to their dataset
-        if len(indices_train) < trainingset_size:
-            indices_train += scaffold_set
+        if len(indices_train) < train_size:
+            indices_train += curr_group
             num_sc_train += 1
-        elif len(indices_vali) < valiset_size:
-            indices_vali += scaffold_set
-            num_sc_vali += 1
+        elif len(indices_val) < val_size:
+            indices_val += curr_group
+            num_sc_val += 1
         else:
-            indices_test += scaffold_set
+            indices_test += curr_group
             num_sc_test += 1
 
     # Report number of scaffolds in each set
-    logger.info(f'Scaffolds in the training set: {int(num_sc_train):}')
-    logger.info(f'Scaffolds in the validation set: {int(num_sc_vali):}')
-    logger.info(f'Scaffolds in the test set: {int(num_sc_test):}')
+    logger.info(f'Groups in the training set: {int(num_sc_train):}')
+    logger.info(f'Groups in the validation set: {int(num_sc_val):}')
+    logger.info(f'Groups in the test set: {int(num_sc_test):}')
 
     # Report number of scaffolds in each set
-    logger.info(f'Size of the training set: {len(indices_train):}')
-    logger.info(f'Size of the validation set: {len(indices_vali):}')
-    logger.info(f'Size of the test set: {len(indices_test):}')
+    return split(dataset, indices_train, indices_val, indices_test)
 
-    return indices_train, indices_vali, indices_test
+    
+####################################
+# frequently used specific splits
+####################################
+
+split_by_year = partial(split_by_group, value_fn=lambda x: x['year'])
+
+split_by_scaffold = partial(split_by_group_size, value_fn=lambda x: x['scaffold'])

@@ -2,29 +2,33 @@
 # coding: utf-8
 
 
-import argparse
 import os
 
-import Bio.PDB
 import scipy.spatial
-from Bio.PDB.PDBIO import Select
-from rdkit import Chem
-from tqdm import tqdm
 
-import atom3d.datasets.lba.get_labels as lab
 import atom3d.util.file as fi
 import atom3d.util.formats as ft
+import atom3d.datasets.lba.get_labels as lab
+
+from rdkit import Chem
+import Bio.PDB
+from Bio.PDB.PDBIO import Select
+from tqdm import tqdm
+import argparse
+
 
 
 def get_ligand(ligfile):
     """
-    Read ligand from PDB dataset into RDKit Mol. Assumes input is sdf format.
+    Read ligand from PDB dataset into RDKit Mol.
+    :param ligfile: file containing ligand information in SDF format
+    :type ligfile: str
     """
-    lig = Chem.SDMolSupplier(ligfile)[0]
+    lig=Chem.SDMolSupplier(ligfile)[0]
     # Many SDF in PDBBind do not parse correctly. If SDF fails, try loading the mol2 file instead
     if lig is None:
         print('trying mol2...')
-        lig = Chem.MolFromMol2File(ligfile[:-4] + '.mol2')
+        lig=Chem.MolFromMol2File(ligfile[:-4] + '.mol2')
     if lig is None:
         print('failed')
         return None
@@ -36,13 +40,15 @@ def get_pocket_res(protein, ligand, dist):
     """
     Given a co-crystallized protein and ligand, extract residues within specified distance of ligand.
 
-    Args:
-        protein (Biopython Structure object): receptor protein
-        ligand (RDKit Mol object): co-crystallized ligand
-        dist (float): distance cutoff for defining binding site
+    :param protein: Biopython object containing receptor protein
+    :type protein: Bio.PDB.Structure
+    :param ligand: RDKit molecule object containing co-crystallized ligand
+    :type ligand: rdkit.Chem.rdchem.Mol
+    :param dist: distance cutoff for defining binding pocket, in Angstrom
+    :type dist: float
 
-    Returns:
-        key_residues (set of Biopython Residue objects): set of key binding site residues
+    :return key_residues: key binding site residues
+    :rtype key_residues:  set containing Bio.PDB.Residue objects
     """
     # get protein coordinates
     prot_atoms = [a for a in protein.get_atoms()]
@@ -70,12 +76,10 @@ def get_pocket_res(protein, ligand, dist):
 
 class PocketSelect(Select):
     """
-    Selection class for subsetting protein to key binding residues
+    Selection class for subsetting protein to key binding residues. This is a subclass of :class:`Bio.PDB.PDBIO.Select`.
     """
-
     def __init__(self, reslist):
         self.reslist = reslist
-
     def accept_residue(self, residue):
         if residue in self.reslist:
             return True
@@ -86,10 +90,12 @@ class PocketSelect(Select):
 def process_files(input_dir):
     """
     Process all protein (pdb) and ligand (sdf) files in input directory.
-    Args
-        input dir (str): directory containing PDBBind data
-    Returns
-        structure_dict (dict): dictionary containing each structure, keyed by PDB code. Each PDB is a dict containing protein in Biopython format and ligand in RDKit Mol format
+
+    :param input dir: directory containing PDBBind data
+    :type input_dir: str
+
+    :return structure_dict: dictionary containing each structure, keyed by PDB code. Each PDB is a dict containing protein as Biopython object and ligand as RDKit Mol object
+    :rtype structure_dict: dict
     """
     structure_dict = {}
     pdb_files = fi.find_files(input_dir, 'pdb')
@@ -110,9 +116,19 @@ def process_files(input_dir):
     return structure_dict
 
 
+
 def write_files(pdbid, protein, ligand, pocket, out_path):
     """
     Writes cleaned structure files for protein, ligand, and pocket.
+
+    :param pdbid: PDB ID for protein
+    :type pdbid: str
+    :param protein: object containing proteins
+    :type ligand: object containing ligand molecules
+    :param pocket: residues contained in pocket, as output by get_pocket_res()
+    :type pocket: set containing Bio.PDB.Residue objects
+    :param out_path: directory to write files to
+    :type out_path: str
     """
     # write protein to mmCIF file
     io = Bio.PDB.MMCIFIO()
@@ -127,9 +143,16 @@ def write_files(pdbid, protein, ligand, pocket, out_path):
     writer.write(ligand)
 
 
-def produce_cleaned_dataset(structure_dict, out_path, dist):
+def produce_cleaned_dataset(structure_dict, out_path, dist=6.0):
     """
-    Generate cleaned dataset in out_path, given dictionary of structures processed by process_files.
+    Generate and save cleaned dataset, given dictionary of structures processed by process_files.
+
+    :param structure_dict: dictionary containing protein and ligand structures processed from input files. Should be a nested dict with PDB ID in first level and keys 'protein', 'ligand' in second level.
+    :type structure_dict: dict
+    :param out_path: path to output directory
+    :type out_path: str
+    :param dist: distance cutoff for defining binding pocket (in Angstrom), default is 6.0
+    :type dist: float, optional
     """
     proteins = []
     pockets = []
@@ -141,7 +164,6 @@ def produce_cleaned_dataset(structure_dict, out_path, dist):
             continue
         pocket_res = get_pocket_res(protein, ligand, dist)
         write_files(pdb, protein, ligand, pocket_res, out_path)
-
 
 def generate_labels(data_dir, out_dir):
     lab.main(data_dir, out_dir)

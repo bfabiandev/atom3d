@@ -6,7 +6,7 @@ import pandas as pd
 import parallel as par
 import scipy.spatial
 import torch
-from util import *
+from atom3d.util import *
 
 # import atom3d.util.datatypes as dt
 import atom3d.shard.shard as sh
@@ -17,13 +17,16 @@ np.random.seed(seed)
 random.seed(seed)
 torch.manual_seed(seed)
 
-allowed_atoms = ['C', 'O', 'N', 'S', 'P', 'SE']  # 'ZN', 'NA', 'FE', 'CA', 'MG', 'CU', 'CL', 'F']
+allowed_atoms = ['C', 'O', 'N', 'S', 'P', 'SE'] #'ZN', 'NA', 'FE', 'CA', 'MG', 'CU', 'CL', 'F'] 
 
-res_wt_dict = {}
+
+res_wt_dict={}
 with open('train_res_weights') as f:
     for line in f:
         res, wt = line.strip().split()
         res_wt_dict[res] = float(wt)
+
+
 
 
 def shard_envs(input_path, output_path, num_threads=8, subsample=True):
@@ -72,22 +75,23 @@ def _shard_envs(input_sharded, output_sharded, shard_num, subsample):
         if not subunits:
             continue
         envs.append(pd.concat(subunits))
-
+        
     envs = pd.concat(envs).reset_index(drop=True)
     num_envs = len(envs['subunit'].unique())
     output_sharded._write_shard(shard_num, envs)
     print(f'Done processing shard {shard_num:}, generated {num_envs:} '
-          f'environments from {num_structures:} structures.')
+                f'environments from {num_structures:} structures.')
 
 
 def _gen_subunits(df, subsample):
     """Extract environments as subunits """
     subunits = []
     # df = df.set_index(['chain', 'residue', 'resname'], drop=False)
-    df = df.dropna(subset=['x', 'y', 'z'])
-    # remove Hets and non-allowable atoms
+    df = df.dropna(subset=['x','y','z'])
+    #remove Hets and non-allowable atoms
     df = df[df['element'].isin(allowed_atoms)]
-    df = df[df['hetero'].str.strip() == '']
+    df = df[df['hetero'].str.strip()=='']
+
 
     for chain_res, res_df in df.groupby(['chain', 'residue', 'resname']):
         # chain_res = res_df.index.values[0]
@@ -104,7 +108,7 @@ def _gen_subunits(df, subsample):
         if not np.all([b in res_df['name'].to_list() for b in bb_atoms]):
             # print('residue missing atoms...   skipping')
             return
-        CA_pos = res_df[res_df['name'] == 'CA'][['x', 'y', 'z']].astype(np.float32).to_numpy()[0]
+        CA_pos = res_df[res_df['name']=='CA'][['x', 'y', 'z']].astype(np.float32).to_numpy()[0]
 
         CB_pos = CA_pos + (np.ones_like(CA_pos) * gly_CB_mu)
 
@@ -114,23 +118,26 @@ def _gen_subunits(df, subsample):
         res_bb = res_df[res_df['name'].isin(bb_atoms)]
         subunit_df = pd.concat([subunit_df, res_bb]).reset_index(drop=True)
 
-        # environment = all atoms within 10*sqrt(2) angstroms (to enable a 20A cube)
-        kd_tree = scipy.spatial.KDTree(subunit_df[['x', 'y', 'z']].to_numpy())
-        subunit_pt_idx = kd_tree.query_ball_point(CB_pos, r=10.0 * np.sqrt(2), p=2.0)
+        # environment = all atoms within 10*sqrt(3) angstroms (to enable a 20A cube)
+        kd_tree = scipy.spatial.KDTree(subunit_df[['x','y','z']].to_numpy())
+        subunit_pt_idx = kd_tree.query_ball_point(CB_pos, r=10.0*np.sqrt(3), p=2.0)
 
         sub_df = subunit_df.loc[subunit_pt_idx]
         tmp = sub_df.copy()
         tmp['subunit'] = '_'.join([str(x) for x in chain_res])
-
+ 
         subunits.append(tmp)
     return subunits
 
+    
 
-if __name__ == "__main__":
-    data_dir = O_DIR + 'atom3d/data/residue_deletion'
+if __name__=="__main__":
+    data_dir = O_DIR+'atom3d/data/residue_deletion'
     sharded_path = os.path.join(data_dir, 'test_pdbs@100/test_pdbs@100')
     out_env_path = os.path.join(data_dir, 'split/test_envs_unbalanced@100')
-
+    
     # out_graph = os.path.join(data_dir, 'graph_pt')
     # generate_graph_data(sharded_path, out_graph, num_cores)
     shard_envs(sharded_path, out_env_path, num_threads=8, subsample=False)
+
+

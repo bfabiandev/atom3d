@@ -1,3 +1,8 @@
+"""
+Filtering functions for protein structural classification by SCOP.
+
+These all are applied to individual atom dataframes, and remove entries from that dataframe as necessary.
+"""
 import numpy as np
 import pandas as pd
 
@@ -7,10 +12,22 @@ import atom3d.util.file as fi
 
 def form_scop_filter(level, allowed=None, excluded=None):
     """
-    Filter by SCOP classification at a specified level.
+    Create filter by SCOP classification at a specified level.
 
-    Valid levels are type, class, fold, superfamily, family.
+    Valid levels are: type, class, fold, superfamily, family.
+
+    :param level: values that we will keep when they are found.
+    :type level: str
+    :param allowed: allowed SCOP values.
+    :type allowed: list[str], optional
+    :param excluded: excluded SCOP values.
+    :type excluded: list[str], optional
+
+    :return: function that implements the specified filter.
+    :rtype: filter function
     """
+    if excluded is not None and allowed is not None:
+        raise RuntimeError('Can only specify one of allowed and excluded.')
     if allowed is None:
         allowed = []
     if excluded is None:
@@ -49,26 +66,28 @@ def form_scop_filter(level, allowed=None, excluded=None):
     return filter_fn
 
 
-def form_scop_filter_against(sharded, level, conservative):
+def form_scop_filter_against(dataset, level, conservative):
     """
-    Remove structures with matching scop class to a chain in sharded.
+    Create filter that removes structures with matching SCOP class to a chain in supplied dataset.
 
-    We consider each chain in each structure separately, and remove the
-    structure if any of them matches any chain in sharded.
+    We consider each chain in each structure separately, and remove the structure if any of them matches any chain in dataset. This is done at the specified SCOP level.  Valid levels are: type, class, fold, superfamily, family.
 
-    This is done at the specified scop level, which can be one of type, class,
-    fold, superfamily, or family.
+    :param dataset: dataset that if we are checking for matches against.
+    :type dataset: atom3d dataset
+    :param level: SCOP level at which we are comparing datasets.
+    :type level: str
+    :param conservative: indicates what we should do about pdbs that do not have any SCOP class associated with them.  True means we throw out, False means we keep.
+    :type conservative: bool
 
-    Conservative indicates what we should do about pdbs that do not have any
-    scop class associated with them.  True means we throw out, False means we
-    keep.
+    :return: function that implements the specified filter.
+    :rtype: filter function.
     """
     scop_index = scop.get_scop_index()[level]
 
     def form_scop_against():
         result = []
-        for shard in sharded.iter_shards():
-            for (e, su, st), structure in shard.groupby(
+        for x in dataset:
+            for (e, su, st), structure in x['atoms'].groupby(
                     ['ensemble', 'subunit', 'structure']):
                 pc = fi.get_pdb_code(st).lower()
                 for (m, c), _ in structure.groupby(['model', 'chain']):
